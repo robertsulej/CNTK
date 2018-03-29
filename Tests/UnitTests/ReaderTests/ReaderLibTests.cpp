@@ -1011,14 +1011,31 @@ BOOST_AUTO_TEST_CASE(LTNoRandomizerMultiWorker)
         config.m_workerRank = i;
 
         randomizer->StartEpoch(config);
-        Sequences sequences = randomizer->GetNextSequences(1, 1);
-        if (i < 3)
+        if (i < 2)
         {
+            // Worker 0 and 1 will get two sequences.
+            Sequences sequences = randomizer->GetNextSequences(1, 1);
+            sequences = randomizer->GetNextSequences(1, 1);
             BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
+        }
+        else if (i == 2)
+        {
+            // Worker 2 will get only one sequence from the first
+            // chunk, but not from the second chunk. There are 6 sequences
+            // with indices [0,5], we take mod 4, which matches only for 2.
+            Sequences sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
+            sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK(sequences.m_data.empty());
         }
         else
         {
+            // Worker 3 (4th worker) will not get any sequence from the
+            // first chunk, but gets one from the second chunk.
+            Sequences sequences = randomizer->GetNextSequences(1, 1);
             BOOST_CHECK(sequences.m_data.empty());
+            sequences = randomizer->GetNextSequences(1, 1);
+            BOOST_CHECK_EQUAL(sequences.m_data.size(), 1);
         }
     }
 }

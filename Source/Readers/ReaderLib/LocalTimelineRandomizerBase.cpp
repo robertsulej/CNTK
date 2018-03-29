@@ -111,12 +111,13 @@ void LocalTimelineRandomizerBase::GetNextSequenceDescriptions(size_t maxSampleCo
         RuntimeError("The size of a minibatch cannot exceed max int.");
 
     // This randomizer operates on the local time-line. So there could be chunks with no data
-    // for all workers. In that case, we return an empty sequences.
+    // for all workers. In that case, we return an empty sequences. 
     if (m_window.m_sequences.empty())
     {
-        assert(result.m_data.empty());
         m_sequenceBuffer.clear();
         m_chunkBuffer.clear();
+        // Calling Refill to load the next window.
+        Refill();
         return;
     }
 
