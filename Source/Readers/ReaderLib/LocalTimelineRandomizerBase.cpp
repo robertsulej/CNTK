@@ -73,7 +73,9 @@ void LocalTimelineRandomizerBase::Refill()
 
     // Make sure there is no outstanding prefetch.
     if (!m_prefetch.valid())
+    {
         m_prefetch = std::async(std::launch::async, [this]() { Prefetch(); });
+    }
 
     m_prefetch.get();
 
@@ -108,10 +110,16 @@ void LocalTimelineRandomizerBase::GetNextSequenceDescriptions(size_t maxSampleCo
     if (maxSampleCount > std::numeric_limits<int>::max())
         RuntimeError("The size of a minibatch cannot exceed max int.");
 
-    // The underlying randomizer should always fill data,
-    // in case it cannot we report the error.
-    if (m_window.m_sequences.empty()) 
-        RuntimeError("Could not read any data.");
+    // This randomizer operates on the local time-line. So there could be chunks with no data
+    // for all workers. In that case, we return an empty sequences. 
+    if (m_window.m_sequences.empty())
+    {
+        m_sequenceBuffer.clear();
+        m_chunkBuffer.clear();
+        // Calling Refill to load the next window.
+        Refill();
+        return;
+    }
 
     size_t samplesLoaded = 0;
     bool atLeastOneSequenceNeeded = true;
@@ -190,7 +198,9 @@ Sequences LocalTimelineRandomizerBase::GetNextSequences(size_t /*ignoring global
     }
 
     if (m_sequenceBuffer.size() == 0) // No data
+    {
         return result;
+    }
 
     // Lets actually fetch data.
     result.m_data.resize(GetStreamDescriptions().size(), std::vector<SequenceDataPtr>(m_sequenceBuffer.size()));
