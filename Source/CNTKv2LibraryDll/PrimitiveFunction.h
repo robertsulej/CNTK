@@ -316,6 +316,8 @@ namespace CNTK
         static const std::wstring AttributeNameDoVarianceScaling;
         static const std::wstring AttributeNameGroups;
 
+        static const size_t convolutionOpDefaultValueForGroups = 1;
+
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
             : Function(inputs, std::move(functionConfig), nullptr, functionName, uid), m_op(op)

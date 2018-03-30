@@ -3281,7 +3281,6 @@ namespace CNTK
             auto filterRank = static_cast<int>(convolutionMap.Shape().Rank());
             auto padding = autoPadding;
             auto expandedStrides = strides;
-            size_t groups = 1;
 
             if ((filterRank - inputRank) == 1)
                 --filterRank;
@@ -3304,7 +3303,7 @@ namespace CNTK
                 dilation,
                 false,
                 { 0 },
-                groups,
+                PrimitiveFunction::convolutionOpDefaultValueForGroups,
                 maxTempMemSizeInSamples,
                 name);
             return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Convolution", name);

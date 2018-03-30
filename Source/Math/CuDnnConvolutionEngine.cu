@@ -50,6 +50,7 @@ public:
         for (int i = 0; i < filt_size -1; i++)
             dims[dim_size - 1 - i] = (int)filt[i];
         // Set map count(aka K) dimension.
+        // mapCount = 3; // !!! TEMPORARY....REMOVE IT.
         dims[0] = (int)mapCount;
         dims[1] = (int)filt[filt_size - 1];
         int numElems = 1;
@@ -315,6 +316,7 @@ protected:
             }
             return err;
         };
+        CUDNN_CALL(cudnnSetConvolutionGroupCount(*m_conv, (int)m_geometry->Groups()));
         FindBestAlgo(batchSize, m_fwdAlgo, workspaceSizeFinder, deterministicFinder, finder, staticFinder, workspace);
         if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_fwdAlgo.AlgoMathType));
         else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));

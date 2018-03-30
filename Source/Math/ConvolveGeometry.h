@@ -37,7 +37,7 @@ public:
     const BoolVec& AutoPad() const { return m_autoPad; }
     const TensorShape& LowerPad() const { return m_lowerPad; }
     const TensorShape& UpperPad() const { return m_upperPad; }
-    const size_t Groups() const { return m_groups; }
+    size_t Groups() const { return m_groups; }
 
     // Maps from a "row" (index of output cell) to its base "col" (index of input cell). For a given row,
     // the cols that contribute to it are { MpRowCol[row] + Indices[i0 + 1 + i] | 0 <= i < Indices[i0] },
