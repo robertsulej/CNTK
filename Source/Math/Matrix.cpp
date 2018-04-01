@@ -6245,6 +6245,7 @@ void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperato
 template class Matrix<float>;
 template class Matrix<double>;
 template class Matrix<half>;
+//template class Matrix<char>;
 
 // instantiate some templated methods
 template MATH_API void Matrix<float>::AdaDeltaUpdate(Matrix<float>& gradients, Matrix<float>& functionvalues, float learningRatePerSample, float rho, float epsilon, int* timestamps, int currentTimestamp);

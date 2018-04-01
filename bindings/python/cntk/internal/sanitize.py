@@ -61,6 +61,8 @@ def sanitize_precision(precision):
         return np.float64
     elif precision in [cntk_py.DataType_Float16, 'float16', np.float16]:
         return np.float16
+    elif precision in [cntk_py.DataType_Int8, 'int8_t', 'int8', np.int8]:
+        return np.int8
     elif precision in [cntk_py.DataType_Unknown]:
         return None
     else:
