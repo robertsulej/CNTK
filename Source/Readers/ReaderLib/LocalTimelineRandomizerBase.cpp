@@ -118,6 +118,8 @@ void LocalTimelineRandomizerBase::GetNextSequenceDescriptions(size_t maxSampleCo
         m_chunkBuffer.clear();
         // Calling Refill to load the next window.
         Refill();
+        if (m_prefetch.valid())
+            m_prefetch.wait_for(std::chrono::seconds(60));
         return;
     }
 
