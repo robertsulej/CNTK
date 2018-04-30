@@ -247,16 +247,28 @@ def store_eval_model_with_native_udf(eval_model, cfg):
 def compute_rpn_proposals(rpn_model, image_input, roi_input, dims_input, cfg):
     num_images = cfg["DATA"].NUM_TRAIN_IMAGES
     # Create the minibatch source
-    od_minibatch_source = ObjectDetectionMinibatchSource(
-        cfg["DATA"].TRAIN_MAP_FILE, cfg["DATA"].TRAIN_ROI_FILE,
-        num_classes=cfg["DATA"].NUM_CLASSES,
-        max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
-        pad_width=cfg.IMAGE_WIDTH,
-        pad_height=cfg.IMAGE_HEIGHT,
-        pad_value=cfg["MODEL"].IMG_PAD_COLOR,
-        max_images=num_images,
-        randomize=False, use_flipping=False,
-        proposal_provider=None)
+    if cfg["DATA"].TRAIN_MAP_FILE.endswith('.txt'):
+        od_minibatch_source = ObjectDetectionMinibatchSource.fromMapFiles(
+            cfg["DATA"].TRAIN_MAP_FILE, cfg["DATA"].TRAIN_ROI_FILE,
+            num_classes=cfg["DATA"].NUM_CLASSES,
+            max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
+            pad_width=cfg.IMAGE_WIDTH,
+            pad_height=cfg.IMAGE_HEIGHT,
+            pad_value=cfg["MODEL"].IMG_PAD_COLOR,
+            max_images=num_images,
+            randomize=False, use_flipping=False,
+            proposal_provider=None)
+    elif cfg["DATA"].TRAIN_MAP_FILE.endswith('.df'):
+        od_minibatch_source = ObjectDetectionMinibatchSource.fromDataFrame(
+            cfg["DATA"].TRAIN_MAP_FILE,
+            num_classes=cfg["DATA"].NUM_CLASSES,
+            max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
+            pad_width=cfg.IMAGE_WIDTH,
+            pad_height=cfg.IMAGE_HEIGHT,
+            pad_value=cfg["MODEL"].IMG_PAD_COLOR,
+            max_images=num_images,
+            randomize=False, use_flipping=False,
+            proposal_provider=None)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -541,17 +553,30 @@ def train_model(image_input, roi_input, dims_input, loss, pred_error,
     else:
         proposal_provider = None
 
-    od_minibatch_source = ObjectDetectionMinibatchSource(
-        cfg["DATA"].TRAIN_MAP_FILE, cfg["DATA"].TRAIN_ROI_FILE,
-        num_classes=cfg["DATA"].NUM_CLASSES,
-        max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
-        pad_width=cfg.IMAGE_WIDTH,
-        pad_height=cfg.IMAGE_HEIGHT,
-        pad_value=cfg["MODEL"].IMG_PAD_COLOR,
-        randomize=True,
-        use_flipping=cfg["TRAIN"].USE_FLIPPED,
-        max_images=cfg["DATA"].NUM_TRAIN_IMAGES,
-        proposal_provider=proposal_provider)
+    if cfg["DATA"].TRAIN_MAP_FILE.endswith('.txt'):
+        od_minibatch_source = ObjectDetectionMinibatchSource.fromMapFiles(
+            cfg["DATA"].TRAIN_MAP_FILE, cfg["DATA"].TRAIN_ROI_FILE,
+            num_classes=cfg["DATA"].NUM_CLASSES,
+            max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
+            pad_width=cfg.IMAGE_WIDTH,
+            pad_height=cfg.IMAGE_HEIGHT,
+            pad_value=cfg["MODEL"].IMG_PAD_COLOR,
+            randomize=True,
+            use_flipping=cfg["TRAIN"].USE_FLIPPED,
+            max_images=cfg["DATA"].NUM_TRAIN_IMAGES,
+            proposal_provider=proposal_provider)
+    elif cfg["DATA"].TRAIN_MAP_FILE.endswith('.df'):
+        od_minibatch_source = ObjectDetectionMinibatchSource.fromDataFrame(
+            cfg["DATA"].TRAIN_MAP_FILE,
+            num_classes=cfg["DATA"].NUM_CLASSES,
+            max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
+            pad_width=cfg.IMAGE_WIDTH,
+            pad_height=cfg.IMAGE_HEIGHT,
+            pad_value=cfg["MODEL"].IMG_PAD_COLOR,
+            randomize=True,
+            use_flipping=cfg["TRAIN"].USE_FLIPPED,
+            max_images=cfg["DATA"].NUM_TRAIN_IMAGES,
+            proposal_provider=proposal_provider)
 
     # define mapping from reader streams to network inputs
     input_map = {

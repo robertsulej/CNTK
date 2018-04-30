@@ -17,10 +17,10 @@ def get_configuration():
     from FasterRCNN_config import cfg as detector_cfg
     # for VGG16 base model use:         from utils.configs.VGG16_config import cfg as network_cfg
     # for AlexNet base model use:       from utils.configs.AlexNet_config import cfg as network_cfg
-    from utils.configs.AlexNet_config import cfg as network_cfg
+    from utils.configs.VGG16_config import cfg as network_cfg
     # for Pascal VOC 2007 data set use: from utils.configs.Pascal_config import cfg as dataset_cfg
     # for the Grocery data set use:     from utils.configs.Grocery_config import cfg as dataset_cfg
-    from utils.configs.Grocery_config import cfg as dataset_cfg
+    from utils.configs.MF_config_full import cfg as dataset_cfg
 
     return merge_configs([detector_cfg, network_cfg, dataset_cfg])
 

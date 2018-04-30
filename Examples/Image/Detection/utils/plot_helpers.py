@@ -60,6 +60,7 @@ def resize_and_pad(img, width, height, pad_value=114):
     model_arg_rep = np.ascontiguousarray(np.array(resized_with_pad, dtype=np.float32).transpose(2, 0, 1))
 
     dims = (width, height, target_w, target_h, img_width, img_height)
+    print("DIMS:", dims)
     return resized_with_pad, model_arg_rep, dims
 
 def visualize_detections(img_path, roi_coords, roi_labels, roi_scores,

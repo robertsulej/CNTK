@@ -10,10 +10,13 @@ from utils.od_reader import ObjectDetectionReader
 import numpy as np
 
 class ObjectDetectionMinibatchSource(UserMinibatchSource):
-    def __init__(self, img_map_file, roi_map_file, num_classes,
-                 max_annotations_per_image, pad_width, pad_height, pad_value,
-                 randomize, use_flipping, proposal_provider, proposal_iou_threshold=0.5,
-                 provide_targets=False, normalize_means=None, normalize_stds=None, max_images=None):
+    def __init__(self, od_reader, proposal_provider):
+
+        self.od_reader = od_reader
+        num_classes = od_reader._num_classes
+        max_annotations_per_image = od_reader._max_annotations_per_image
+        pad_width = od_reader._pad_width
+        pad_height = od_reader._pad_height
 
         self.image_si = StreamInformation("image", 0, 'dense', np.float32, (3, pad_height, pad_width,))
         self.roi_si = StreamInformation("annotation", 1, 'dense', np.float32, (max_annotations_per_image, 5,))
@@ -28,12 +31,34 @@ class ObjectDetectionMinibatchSource(UserMinibatchSource):
         else:
             self.proposals_si = None
 
-        self.od_reader = ObjectDetectionReader(img_map_file, roi_map_file, num_classes,
-                                               max_annotations_per_image, pad_width, pad_height, pad_value,
-                                               randomize, use_flipping, proposal_provider, proposal_iou_threshold,
-                                               provide_targets, normalize_means, normalize_stds, max_images)
-
         super(ObjectDetectionMinibatchSource, self).__init__()
+
+    @classmethod
+    def fromMapFiles(cls, img_map_file, roi_map_file, num_classes,
+                 max_annotations_per_image, pad_width, pad_height, pad_value,
+                 randomize, use_flipping, proposal_provider, proposal_iou_threshold=0.5,
+                 provide_targets=False, normalize_means=None, normalize_stds=None, max_images=None):
+
+        od_reader = ObjectDetectionReader.fromMapFiles(img_map_file, roi_map_file, num_classes,
+                                                       max_annotations_per_image, pad_width, pad_height, pad_value,
+                                                       randomize, use_flipping, proposal_provider, proposal_iou_threshold,
+                                                       provide_targets, normalize_means, normalize_stds, max_images)
+
+        return cls(od_reader, proposal_provider)
+
+    @classmethod
+    def fromDataFrame(cls, img_df_file, num_classes,
+                      max_annotations_per_image, pad_width, pad_height, pad_value,
+                      randomize, use_flipping, proposal_provider, proposal_iou_threshold=0.5,
+                      provide_targets=False, normalize_means=None, normalize_stds=None, max_images=None):
+
+        od_reader = ObjectDetectionReader.fromDataFrame(img_df_file, num_classes,
+                                                        max_annotations_per_image, pad_width, pad_height, pad_value,
+                                                        randomize, use_flipping, proposal_provider, proposal_iou_threshold,
+                                                        provide_targets, normalize_means, normalize_stds, max_images)
+
+        return cls(od_reader, proposal_provider)
+
 
     def stream_infos(self):
         if self.proposals_si is None:

@@ -16,12 +16,13 @@ if DEBUG:
 
 
 class ObjectDetectionReader:
-    def __init__(self, img_map_file, roi_map_file, num_classes,
-                 max_annotations_per_image, pad_width, pad_height, pad_value,
+    def __init__(self, num_classes, max_annotations_per_image,
+                 pad_width, pad_height, pad_value,
                  randomize, use_flipping,
                  proposal_provider, proposal_iou_threshold,
-                 provide_targets, normalize_means, normalize_stds, max_images=None):
+                 provide_targets, normalize_means, normalize_stds):
         self._num_classes = num_classes
+        self._max_annotations_per_image = max_annotations_per_image
         self._pad_width = pad_width
         self._pad_height = pad_height
         self._pad_value = pad_value
@@ -39,12 +40,48 @@ class ObjectDetectionReader:
         self._img_file_paths = []
         self._gt_annotations = []
 
-        self._num_images = self._parse_map_files(img_map_file, roi_map_file, max_annotations_per_image, max_images)
-        self._img_stats = [None for _ in range(self._num_images)]
-
         self._reading_order = None
         self._reading_index = -1
+
+    @classmethod
+    def fromMapFiles(cls, img_map_file, roi_map_file, num_classes,
+                 max_annotations_per_image, pad_width, pad_height, pad_value,
+                 randomize, use_flipping,
+                 proposal_provider, proposal_iou_threshold,
+                 provide_targets, normalize_means, normalize_stds, max_images=None):
+
+        od_reader = cls(num_classes, max_annotations_per_image,
+                        pad_width, pad_height, pad_value,
+                        randomize, use_flipping,
+                        proposal_provider, proposal_iou_threshold,
+                        provide_targets, normalize_means, normalize_stds)
+
+        n = od_reader._parse_map_files(img_map_file, roi_map_file, max_annotations_per_image, max_images)
+        assert n > 0, "no images"
+
+        return od_reader
         
+    @classmethod
+    def fromDataFrame(cls, img_df_file, num_classes,
+                      max_annotations_per_image, pad_width, pad_height, pad_value,
+                      randomize, use_flipping,
+                      proposal_provider, proposal_iou_threshold,
+                      provide_targets, normalize_means, normalize_stds, max_images=None):
+
+        od_reader = cls(num_classes, max_annotations_per_image,
+                        pad_width, pad_height, pad_value,
+                        randomize, use_flipping,
+                        proposal_provider, proposal_iou_threshold,
+                        provide_targets, normalize_means, normalize_stds)
+
+        n = od_reader._parse_dataframe(img_df_file, max_annotations_per_image, max_images)
+        assert n > 0, "no images"
+
+        print("Using #", n, "images")
+
+        return od_reader
+
+
     def get_next_input(self):
         '''
         Reads image data and return image, annotations and shape information
@@ -126,7 +163,66 @@ class ObjectDetectionReader:
         assert len(img_sequence_numbers) == len(roi_sequence_numbers), "number of images and annotation lines do not match"
         assert np.allclose(img_sequence_numbers, roi_sequence_numbers, 0, 0), "the sequence numbers in image and roi map files do not match"
 
+        self._num_images = len(img_sequence_numbers)
+        self._img_stats = [None for _ in range(self._num_images)]
+
         return len(img_sequence_numbers)
+
+    def _parse_dataframe(self, img_df_file, max_annotations_per_image, max_images):
+        import pandas as pd
+        import warnings
+
+        img_df = pd.read_pickle(img_df_file)
+        if max_images is None: max_images = img_df.shape[0]
+        if abs(max_images) > img_df.shape[0]: max_images = img_df.shape[0]
+
+        n_skip = 0
+        if max_images < 0:
+            max_images = abs(max_images)
+            n_skip = img_df.shape[0] - max_images
+
+        # buffer annotations and file paths
+        #img_sequence_numbers = [i for i in range(n_skip, n_skip+max_images)]
+        img_base_path = os.path.dirname(os.path.abspath(img_df_file))
+        img_base_folder = os.path.basename(img_df_file[:-3])
+        #self._img_file_paths = [os.path.join(img_base_path, img_base_folder, img_df.FolderId[i], img_df.FileName[i]+img_df.FileExt[i]) for i in range(n_skip, n_skip+max_images)]
+
+        # buffer roi's
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+
+            for i in range(n_skip, n_skip+max_images):
+
+                annotations = np.zeros((max_annotations_per_image, 5))
+                num_annotations = 1
+
+                fbox = img_df.Box[i]
+
+                try:
+                    annotations[0,0] = fbox[0]
+                    annotations[0,1] = fbox[1]
+                    annotations[0,2] = fbox[0]+fbox[2]
+                    annotations[0,3] = fbox[1]+fbox[3]
+                    annotations[0,4] = 1 # now just one class: face
+                except Warning:
+                    print('Skip file', img_df.FileName[i], 'with annotation:', fbox)
+                    continue
+
+                img_path = os.path.join(img_base_path, img_base_folder, img_df.FolderId[i], img_df.FileName[i]+img_df.FileExt[i])
+                img = cv2.imread(img_path)
+
+                if img is None or len(img) < 10 or len(img[0]) < 10:
+                    print('Skip file', img_df.FileName[i], 'with too small image / no image at all.')
+                    continue
+
+                self._gt_annotations.append(annotations)
+                self._img_file_paths.append(img_path)
+
+
+        self._num_images = len(self._img_file_paths)
+        self._img_stats = [None for _ in range(self._num_images)]
+
+        return len(self._img_file_paths)
 
     def _reset_reading_order(self):
         self._reading_order = np.arange(self._num_images)
@@ -138,7 +234,7 @@ class ObjectDetectionReader:
         self._reading_index = 0
 
     def _read_image(self, image_path):
-        if "@" in image_path:
+        if not os.path.isabs(image_path) and "@" in image_path:
             at = str.find(image_path, '@')
             zip_file = image_path[:at]
             img_name = image_path[(at + 2):]

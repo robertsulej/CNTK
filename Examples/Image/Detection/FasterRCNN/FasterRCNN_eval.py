@@ -32,6 +32,7 @@ class FasterRCNN_Evaluator:
 
     def process_image_detailed(self, img_path):
         _, cntk_img_input, dims = load_resize_and_pad(img_path, self._img_shape[2], self._img_shape[1])
+        print(np.mean(cntk_img_input[0]), np.mean(cntk_img_input[1]), np.mean(cntk_img_input[2]))
 
         cntk_dims_input = np.array(dims, dtype=np.float32)
         cntk_dims_input.shape = (1,) + cntk_dims_input.shape
@@ -56,17 +57,29 @@ def compute_test_set_aps(eval_model, cfg):
     frcn_eval = eval_model(image_input, dims_input)
 
     # Create the minibatch source
-    minibatch_source = ObjectDetectionMinibatchSource(
-        cfg["DATA"].TEST_MAP_FILE,
-        cfg["DATA"].TEST_ROI_FILE,
-        max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
-        pad_width=cfg.IMAGE_WIDTH,
-        pad_height=cfg.IMAGE_HEIGHT,
-        pad_value=cfg["MODEL"].IMG_PAD_COLOR,
-        randomize=False, use_flipping=False,
-        max_images=cfg["DATA"].NUM_TEST_IMAGES,
-        num_classes=cfg["DATA"].NUM_CLASSES,
-        proposal_provider=None)
+    if cfg["DATA"].TRAIN_MAP_FILE.endswith('.txt'):
+        minibatch_source = ObjectDetectionMinibatchSource.fromMapFiles(
+            cfg["DATA"].TEST_MAP_FILE,
+            cfg["DATA"].TEST_ROI_FILE,
+            max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
+            pad_width=cfg.IMAGE_WIDTH,
+            pad_height=cfg.IMAGE_HEIGHT,
+            pad_value=cfg["MODEL"].IMG_PAD_COLOR,
+            randomize=False, use_flipping=False,
+            max_images=cfg["DATA"].NUM_TEST_IMAGES,
+            num_classes=cfg["DATA"].NUM_CLASSES,
+            proposal_provider=None)
+    elif cfg["DATA"].TRAIN_MAP_FILE.endswith('.df'):
+        minibatch_source = ObjectDetectionMinibatchSource.fromDataFrame(
+            cfg["DATA"].TEST_MAP_FILE,
+            max_annotations_per_image=cfg.INPUT_ROIS_PER_IMAGE,
+            pad_width=cfg.IMAGE_WIDTH,
+            pad_height=cfg.IMAGE_HEIGHT,
+            pad_value=cfg["MODEL"].IMG_PAD_COLOR,
+            randomize=False, use_flipping=False,
+            max_images=-cfg["DATA"].NUM_TEST_IMAGES,  # negative means n images from the end of dataset
+            num_classes=cfg["DATA"].NUM_CLASSES,
+            proposal_provider=None)
 
     # define mapping from reader streams to network inputs
     input_map = {

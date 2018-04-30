@@ -31,7 +31,7 @@ __C.CNTK.FAST_MODE = False
 __C.CNTK.DEBUG_OUTPUT = False
 __C.CNTK.GRAPH_TYPE = "png" # "png" or "pdf"
 # Set to True if you want to store an eval model with native UDFs (e.g. for inference using C++ or C#)
-__C.STORE_EVAL_MODEL_WITH_NATIVE_UDF = False
+__C.STORE_EVAL_MODEL_WITH_NATIVE_UDF = True
 
 # Learning parameters
 __C.CNTK.L2_REG_WEIGHT = 0.0005
@@ -40,7 +40,7 @@ __C.CNTK.MOMENTUM_PER_MB = 0.9
 __C.CNTK.BIAS_LR_MULT = 2.0
 
 # E2E learning parameters
-__C.CNTK.E2E_MAX_EPOCHS = 20
+__C.CNTK.E2E_MAX_EPOCHS = 10 #20
 __C.CNTK.E2E_LR_PER_SAMPLE = [0.001] * 10 + [0.0001] * 10 + [0.00001]
 
 # 4-stage learning parameters (alternating training scheme)
