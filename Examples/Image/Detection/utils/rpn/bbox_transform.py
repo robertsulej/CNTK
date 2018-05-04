@@ -28,6 +28,11 @@ def bbox_transform(ex_rois, gt_rois):
         (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()
     return targets
 
+np_error = False
+def np_signal_error(type, flag):
+    print("Floating point error (%s), with flag %s" % (type, flag))
+    np_error = True
+
 # gets
 # - boxes (n, 4) as [x_low, y_low, x_high, y_high]
 # - deltas (n, 4) as [dx, dy, dw, dh]
@@ -38,7 +43,7 @@ def bbox_transform(ex_rois, gt_rois):
 # --> pred_x_low = pred_ctr_x - 0.5 * pred_w
 # and
 # pred_w = np.exp(dw) * widths
-def bbox_transform_inv(boxes, deltas):
+def bbox_transform_inv(boxes, deltas, max_w = 1000, max_h = 1000):
     if boxes.shape[0] == 0:
         return np.zeros((0, deltas.shape[1]), dtype=deltas.dtype)
 
@@ -54,10 +59,26 @@ def bbox_transform_inv(boxes, deltas):
     dw = deltas[:, 2::4]
     dh = deltas[:, 3::4]
 
+    np_error = False
+    saved_handler = np.seterrcall(np_signal_error)
+    save_err = np.seterr(all='call')
+
     pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
     pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]
+
     pred_w = np.exp(dw) * widths[:, np.newaxis]
     pred_h = np.exp(dh) * heights[:, np.newaxis]
+
+    if np_error:
+        print('dw values:', dw)
+        print('dh values:', dh)
+        pred_w[np.isinf(pred_w)] = max_w
+        pred_w[np.isnan(pred_w)] = 2
+        pred_h[np.isinf(pred_h)] = max_h
+        pred_h[np.isnan(pred_h)] = 2
+
+    np.seterrcall(saved_handler)
+    np.seterr(**save_err)
 
     pred_boxes = np.zeros(deltas.shape, dtype=deltas.dtype)
     # x1
@@ -102,7 +123,7 @@ def regress_rois(roi_proposals, roi_regression_factors, labels, dims_input):
         if label > 0:
             deltas = roi_regression_factors[i:i+1,label*4:(label+1)*4]
             roi_coords = roi_proposals[i:i+1,:]
-            regressed_rois = bbox_transform_inv(roi_coords, deltas)
+            regressed_rois = bbox_transform_inv(roi_coords, deltas, max_w=dims_input[4], max_h=dims_input[5])
             roi_proposals[i,:] = regressed_rois
 
     if dims_input is not None:
